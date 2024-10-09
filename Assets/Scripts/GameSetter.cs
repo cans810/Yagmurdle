@@ -29,7 +29,6 @@ public class GameSetter : MonoBehaviour
         "KÖFTE", "ÇORBA", "DONDURMA", "BAHAR", "SPOR"
     };
 
-
     public GameObject canvas;
     public GameObject LetterObjectPrefab;
     public string randomWord;
@@ -42,7 +41,6 @@ public class GameSetter : MonoBehaviour
 
     public Dictionary<int, string> givenAnswers = new Dictionary<int, string>();
 
-    public GameObject currentLetterObjectFilling;
     public List<GameObject> letterObjects;
     public Vector2 currentPoint;
     public int i;
@@ -89,21 +87,10 @@ public class GameSetter : MonoBehaviour
 
         gridSize = randomWord.Length;
 
-        float screenWidth = Camera.main.orthographicSize * 2 * Screen.width / Screen.height;
+        // Calculate the grid's starting position
+        Vector3 gridStartPos = CalculateGridStartPos();
 
-        letterXOffset = 1;
-        letterYOffset = 1;
-
-        // Calculate total grid width and height
-        float totalGridWidth = (gridSize - 1) * letterXOffset;
-        float totalGridHeight = (gridSize - 1) * letterYOffset;
-
-        Vector3 gridStartPos = new Vector3(
-            originalPos.position.x - totalGridWidth / 2f,
-            originalPos.position.y + totalGridHeight / 2f,
-            originalPos.position.z
-        );
-
+        // Instantiate letter objects
         for (int i = 0; i < gridSize; i++)
         {
             for (int j = 0; j < gridSize; j++)
@@ -117,32 +104,32 @@ public class GameSetter : MonoBehaviour
                 );
 
                 letterObjects.Add(letterObject);
-
                 letterObject.GetComponent<Letter>().point = new Vector2(i, j);
-
-                if (j == gridSize - 1)
-                {
-                    letterObject.GetComponent<Letter>().isAnEdge = true;
-                }
             }
         }
 
         gameGenerated = true;
 
-        letterObjects[0].GetComponent<Letter>().currentlyActive = true;
-        i = 0;
-        j = 0;
-        currentPoint = new Vector2(i, j);
+        // Automatically set the first letter as active
+        ActivateLetterAt(0, 0);
+        SetFocusOnLetter(currentPoint);
+    }
 
-        // automatically focus on the first input field
-        EventSystem.current.SetSelectedGameObject(letterObjects[0].GetComponent<Letter>().inputField.gameObject);
+    Vector3 CalculateGridStartPos()
+    {
+        float totalGridWidth = (gridSize - 1) * letterXOffset;
+        float totalGridHeight = (gridSize - 1) * letterYOffset;
+
+        return new Vector3(
+            originalPos.position.x - totalGridWidth / 2f,
+            originalPos.position.y + totalGridHeight / 2f,
+            originalPos.position.z
+        );
     }
 
     void DeleteGame()
     {
-        Transform parentTransform = canvas.transform;
-
-        foreach (Transform child in parentTransform)
+        foreach (Transform child in canvas.transform)
         {
             if (child.GetComponent<Letter>() != null)
             {
@@ -167,6 +154,32 @@ public class GameSetter : MonoBehaviour
                 if (letter.currentlyActive)
                 {
                     letter.inputField.enabled = true;
+
+                    // Check for backspace input
+                    if (Input.GetKeyDown(KeyCode.Backspace))
+                    {
+                        // Clear the last letter's input field
+                        if (currentPoint.y > 0) // Not the first letter in the row
+                        {
+                            // Move back to the previous letter in the same row
+                            currentPoint.y--;
+                        }
+                        else if (currentPoint.x > 0) // Move to the last letter of the previous row
+                        {
+                            currentPoint.x--;
+                            currentPoint.y = gridSize - 1; // Move to the last column of the previous row
+                        }
+                        
+                        // Clear the input field of the current position
+                        letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>().inputField.text = string.Empty;
+
+                        // Activate the previous letter
+                        letter.currentlyActive = false;
+                        letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>().currentlyActive = true;
+
+                        // Automatically move focus to the previous input field
+                        EventSystem.current.SetSelectedGameObject(letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>().inputField.gameObject);
+                    }
                 }
                 else
                 {
@@ -186,7 +199,7 @@ public class GameSetter : MonoBehaviour
                             {
                                 if (c.GetComponent<Letter>().point.x == i)
                                 {
-                                    answer += c.GetComponent<Letter>().inputField.text;
+                                    answer += c.GetComponent<Letter>().inputField.text.ToUpper();
                                 }
                             }
                         }
@@ -202,7 +215,7 @@ public class GameSetter : MonoBehaviour
                             {
                                 if (c.GetComponent<Letter>().point.x == i)
                                 {
-                                    string inputText = c.GetComponent<Letter>().inputField.text;
+                                    string inputText = c.GetComponent<Letter>().inputField.text.ToUpper();
                                     char givenLetter = inputText.Length > 0 ? inputText[0] : '\0';
 
                                     if (givenLetter != '\0')
@@ -231,6 +244,8 @@ public class GameSetter : MonoBehaviour
                         j++;
                     }
 
+                    letter.GetComponent<Animator>().SetBool("LetterTyped",true);
+
                     currentPoint = new Vector2(i, j);
 
                     letter.currentlyActive = false;
@@ -250,6 +265,27 @@ public class GameSetter : MonoBehaviour
                 }
             }
         }
+    }
+
+    void ActivateLetterAt(int x, int y)
+    {
+        int index = x * gridSize + y;
+
+        // Deactivate all letters
+        foreach (GameObject letterObject in letterObjects)
+        {
+            letterObject.GetComponent<Letter>().currentlyActive = false;
+        }
+
+        // Activate the specified letter
+        letterObjects[index].GetComponent<Letter>().currentlyActive = true;
+        SetFocusOnLetter(new Vector2(x, y));
+    }
+
+    void SetFocusOnLetter(Vector2 point)
+    {
+        int index = (int)(point.x * gridSize + point.y);
+        EventSystem.current.SetSelectedGameObject(letterObjects[index].GetComponent<Letter>().inputField.gameObject);
     }
 
     public bool ContainsAndCorrectSpot(string realAnswer, char givenLetter, int index)
