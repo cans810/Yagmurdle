@@ -250,6 +250,7 @@ public class GameSetter : MonoBehaviour
         }
     }
 
+
     IEnumerator ColorLettersOneByOne(int row, string correctWord)
     {
         Transform parentTransform = canvas.transform;
@@ -275,7 +276,7 @@ public class GameSetter : MonoBehaviour
                         }
                         else
                         {
-                            allCorrect = false;
+                            allCorrect = false;  // If any letter is not in correct position, it's not a win
                             if (isInWord)
                             {
                                 c.GetComponent<Letter>().SetColor(Color.yellow);

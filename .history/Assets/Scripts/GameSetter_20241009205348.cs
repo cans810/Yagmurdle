@@ -250,10 +250,10 @@ public class GameSetter : MonoBehaviour
         }
     }
 
+
     IEnumerator ColorLettersOneByOne(int row, string correctWord)
     {
         Transform parentTransform = canvas.transform;
-        bool allCorrect = true;  // Track if all letters are correct
 
         for (int col = 0; col < gridSize; col++)
         {
@@ -273,35 +273,14 @@ public class GameSetter : MonoBehaviour
                         {
                             c.GetComponent<Letter>().SetColor(Color.green);
                         }
-                        else
+                        else if (isInWord)
                         {
-                            allCorrect = false;
-                            if (isInWord)
-                            {
-                                c.GetComponent<Letter>().SetColor(Color.yellow);
-                            }
+                            c.GetComponent<Letter>().SetColor(Color.yellow);
                         }
-                    }
-                    else
-                    {
-                        allCorrect = false;
                     }
 
                     yield return new WaitForSeconds(0.15f);
                 }
-            }
-        }
-
-        // Check if player won
-        if (allCorrect)
-        {
-            Debug.Log("You won!");
-            // Optionally disable further input
-            foreach (GameObject letterObject in letterObjects)
-            {
-                Letter letter = letterObject.GetComponent<Letter>();
-                letter.inputField.enabled = false;
-                letter.currentlyActive = false;
             }
         }
     }

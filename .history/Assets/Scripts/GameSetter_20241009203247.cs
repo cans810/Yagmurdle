@@ -236,6 +236,36 @@ public class GameSetter : MonoBehaviour
         }
     }
 
+    void HandleBackspace()
+    {
+        // Clear the input field of the current position
+        letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>().inputField.text = string.Empty;
+
+        // Deactivate the current letter
+        letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>().currentlyActive = false;
+
+        // Move the current point back
+        if (currentPoint.y > 0)
+        {
+            currentPoint.y--;
+        }
+        else if (currentPoint.x > 0)
+        {
+            currentPoint.x--;
+            currentPoint.y = gridSize - 1;
+        }
+
+        // Activate the previous letter
+        var previousLetter = letterObjects[(int)(currentPoint.x * gridSize + currentPoint.y)].GetComponent<Letter>();
+        previousLetter.currentlyActive = true;
+        previousLetter.inputField.enabled = true;  // Ensure the input field is enabled
+        previousLetter.inputField.Select(); // Focus on the previous letter
+        EventSystem.current.SetSelectedGameObject(previousLetter.inputField.gameObject);
+    }
+
+
+
+
     // Lock the row after the player presses Enter and the letters are checked
     void LockRow(int rowIndex)
     {
@@ -250,10 +280,10 @@ public class GameSetter : MonoBehaviour
         }
     }
 
+
     IEnumerator ColorLettersOneByOne(int row, string correctWord)
     {
         Transform parentTransform = canvas.transform;
-        bool allCorrect = true;  // Track if all letters are correct
 
         for (int col = 0; col < gridSize; col++)
         {
@@ -273,88 +303,15 @@ public class GameSetter : MonoBehaviour
                         {
                             c.GetComponent<Letter>().SetColor(Color.green);
                         }
-                        else
+                        else if (isInWord)
                         {
-                            allCorrect = false;
-                            if (isInWord)
-                            {
-                                c.GetComponent<Letter>().SetColor(Color.yellow);
-                            }
+                            c.GetComponent<Letter>().SetColor(Color.yellow);
                         }
-                    }
-                    else
-                    {
-                        allCorrect = false;
                     }
 
                     yield return new WaitForSeconds(0.15f);
                 }
             }
-        }
-
-        // Check if player won
-        if (allCorrect)
-        {
-            Debug.Log("You won!");
-            // Optionally disable further input
-            foreach (GameObject letterObject in letterObjects)
-            {
-                Letter letter = letterObject.GetComponent<Letter>();
-                letter.inputField.enabled = false;
-                letter.currentlyActive = false;
-            }
-        }
-    }
-
-    void HandleBackspace()
-    {
-        // Check if we're trying to backspace in a completed row
-        if (i < currentPoint.x)
-            return;
-
-        // Only process backspace if we're not at the start of the game
-        if (i == 0 && j == 0 && string.IsNullOrEmpty(letterObjects[0].GetComponent<Letter>().inputField.text))
-            return;
-
-        // Get the current letter
-        Letter currentLetter = letterObjects[(int)(i * gridSize + j)].GetComponent<Letter>();
-
-        // If current position has a letter, delete it and stay at current position
-        if (!string.IsNullOrEmpty(currentLetter.inputField.text))
-        {
-            currentLetter.inputField.text = string.Empty;
-            currentLetter.GetComponent<Animator>().SetBool("LetterTyped", false);
-            
-            // Keep focus on the current letter
-            currentLetter.currentlyActive = true;
-            currentLetter.inputField.enabled = true;
-            EventSystem.current.SetSelectedGameObject(currentLetter.inputField.gameObject);
-            return;
-        }
-
-        // If current position is empty, move back one position
-        if (j > 0)
-        {
-            j--;
-            Letter previousLetter = letterObjects[(int)(i * gridSize + j)].GetComponent<Letter>();
-            previousLetter.inputField.text = string.Empty;
-            previousLetter.GetComponent<Animator>().SetBool("LetterTyped", false);
-            
-            // Set focus to the previous letter
-            currentPoint = new Vector2(i, j);
-            DeactivateAllLetters();
-            previousLetter.currentlyActive = true;
-            previousLetter.inputField.enabled = true;
-            EventSystem.current.SetSelectedGameObject(previousLetter.inputField.gameObject);
-        }
-    }
-
-    private void DeactivateAllLetters()
-    {
-        foreach (GameObject letterObject in letterObjects)
-        {
-            letterObject.GetComponent<Letter>().currentlyActive = false;
-            letterObject.GetComponent<Letter>().inputField.enabled = false;
         }
     }
 
