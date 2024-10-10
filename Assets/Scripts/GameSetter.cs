@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -103,8 +104,18 @@ public class GameSetter : MonoBehaviour
                     gridStartPos.z
                 );
 
+                Letter letterComponent = letterObject.GetComponent<Letter>();
+                letterComponent.point = new Vector2(i, j);
+
+                // Ensure the input field is properly set up
+                TMP_InputField inputField = letterObject.GetComponent<TMP_InputField>();
+                if (inputField != null)
+                {
+                    inputField.characterLimit = 1;
+                    inputField.onValidateInput += letterComponent.ValidateInput;
+                }
+
                 letterObjects.Add(letterObject);
-                letterObject.GetComponent<Letter>().point = new Vector2(i, j);
             }
         }
 
@@ -296,57 +307,80 @@ public class GameSetter : MonoBehaviour
         if (allCorrect)
         {
             Debug.Log("You won!");
+            if (messageText != null)
+                messageText.text = "You won!";
             // Optionally disable further input
-            foreach (GameObject letterObject in letterObjects)
-            {
-                Letter letter = letterObject.GetComponent<Letter>();
-                letter.inputField.enabled = false;
-                letter.currentlyActive = false;
-            }
+            DisableAllInput();
+        }
+        else if (row == gridSize - 1) // Check if this was the last row
+        {
+            Debug.Log("You failed!");
+            if (messageText != null)
+                messageText.text = "You failed! The word was: " + randomWord;
+            DisableAllInput();
+        }
+    }
+
+    void DisableAllInput()
+    {
+        foreach (GameObject letterObject in letterObjects)
+        {
+            Letter letter = letterObject.GetComponent<Letter>();
+            letter.inputField.enabled = false;
+            letter.currentlyActive = false;
         }
     }
 
     void HandleBackspace()
     {
         // Check if we're trying to backspace in a completed row
-        if (i < currentPoint.x)
-            return;
+        if (i < currentPoint.x) return;
 
-        // Only process backspace if we're not at the start of the game
+        // If we're at the start and the first letter is empty, do nothing
         if (i == 0 && j == 0 && string.IsNullOrEmpty(letterObjects[0].GetComponent<Letter>().inputField.text))
             return;
 
         // Get the current letter
-        Letter currentLetter = letterObjects[(int)(i * gridSize + j)].GetComponent<Letter>();
+        int currentIndex = i * gridSize + j;
+        Letter currentLetter = letterObjects[currentIndex].GetComponent<Letter>();
 
-        // If current position has a letter, delete it and stay at current position
+        // If the current letter has text, delete it
         if (!string.IsNullOrEmpty(currentLetter.inputField.text))
         {
             currentLetter.inputField.text = string.Empty;
             currentLetter.GetComponent<Animator>().SetBool("LetterTyped", false);
-            
-            // Keep focus on the current letter
-            currentLetter.currentlyActive = true;
-            currentLetter.inputField.enabled = true;
-            EventSystem.current.SetSelectedGameObject(currentLetter.inputField.gameObject);
-            return;
+            return; // Exit after deleting the letter
         }
 
-        // If current position is empty, move back one position
+        // If the current letter is empty, move back one position
         if (j > 0)
         {
-            j--;
-            Letter previousLetter = letterObjects[(int)(i * gridSize + j)].GetComponent<Letter>();
-            previousLetter.inputField.text = string.Empty;
-            previousLetter.GetComponent<Animator>().SetBool("LetterTyped", false);
-            
-            // Set focus to the previous letter
-            currentPoint = new Vector2(i, j);
-            DeactivateAllLetters();
-            previousLetter.currentlyActive = true;
-            previousLetter.inputField.enabled = true;
-            EventSystem.current.SetSelectedGameObject(previousLetter.inputField.gameObject);
+            j--; // Move to the previous letter
         }
+        else if (i > 0) // If at the start of a row, move to the last letter of the previous row
+        {
+            i--;
+            j = gridSize - 1; // Set to the last letter of the previous row
+        }
+
+        // Get the new current letter
+        currentLetter = letterObjects[i * gridSize + j].GetComponent<Letter>();
+        currentLetter.inputField.text = string.Empty; // Clear text in the new current letter
+        currentLetter.GetComponent<Animator>().SetBool("LetterTyped", false);
+
+        // Set focus to the new current letter
+        SetFocusOnCurrentLetter(currentLetter);
+    }
+
+    private void SetFocusOnCurrentLetter(Letter letter)
+    {
+        // Deactivate all letters
+        DeactivateAllLetters();
+
+        // Set the current letter active and focused
+        letter.currentlyActive = true;
+        letter.inputField.enabled = true;
+        EventSystem.current.SetSelectedGameObject(letter.inputField.gameObject);
     }
 
     private void DeactivateAllLetters()
