@@ -49,8 +49,16 @@ public class GameSetter : MonoBehaviour
 
     private int gridSize;
 
+    public GameObject GameEndCanvas;
+    public GameObject YouWon;
+    public GameObject YouLost;
+
+
     void Start()
     {
+        YouWon.SetActive(false);
+        YouLost.SetActive(false);
+
         letterXOffset = 1;
         letterYOffset = 1;
         i = 0;
@@ -306,17 +314,12 @@ public class GameSetter : MonoBehaviour
         // Check if player won
         if (allCorrect)
         {
-            Debug.Log("You won!");
-            if (messageText != null)
-                messageText.text = "You won!";
-            // Optionally disable further input
+            YouWon.SetActive(true);
             DisableAllInput();
         }
         else if (row == gridSize - 1) // Check if this was the last row
         {
-            Debug.Log("You failed!");
-            if (messageText != null)
-                messageText.text = "You failed! The word was: " + randomWord;
+            YouLost.SetActive(true);
             DisableAllInput();
         }
     }
